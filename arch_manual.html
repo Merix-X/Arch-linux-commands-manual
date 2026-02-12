@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arch Master Command Database</title>
+    <style>
+        :root {
+            --bg: #0f0f17;
+            --surface: #1a1b26;
+            --accent: #7aa2f7;
+            --text: #a9b1d6;
+            --highlight: #e0af68;
+            --danger: #f7768e;
+            --secondary: #414868;
+        }
+        body {
+            font-family: 'Fira Code', 'Courier New', monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1 { text-align: center; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            color: #fff;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            outline: none;
+        }
+
+        table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 8px; overflow: hidden; }
+        th { background: var(--accent); color: var(--bg); padding: 15px; text-align: left; font-weight: bold; }
+        td { padding: 12px 15px; border-bottom: 1px solid #24283b; cursor: pointer; transition: 0.2s; }
+        tr:hover { background: #24283b; }
+        code { color: var(--highlight); font-weight: bold; font-size: 1.1em; }
+
+        /* Modal Styles */
+        #details-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center; align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        .modal {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            border: 1px solid var(--accent);
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal h2 { color: var(--accent); margin-top: 0; border-bottom: 1px solid var(--secondary); padding-bottom: 10px; }
+        .modal p { line-height: 1.8; color: #cfc9c2; font-size: 1.1em; }
+        .modal .detail-section { margin-top: 20px; padding: 15px; background: rgba(122, 162, 247, 0.05); border-left: 4px solid var(--accent); }
+        .close-btn { position: absolute; top: 15px; right: 15px; cursor: pointer; color: var(--danger); font-size: 0.9em; letter-spacing: 1px; }
+        .close-btn:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Arch Linux Command Compendium</h1>
+    <input type="text" id="searchInput" class="search-box" placeholder="Search by command, keyword, or description...">
+
+    <table id="cmdTable">
+        <thead>
+            <tr>
+                <th>Command</th>
+                <th>Standard Entry</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
+</div>
+
+<div id="details-overlay">
+    <div class="modal">
+        <span class="close-btn" onclick="closeModal()">[ ESC / CLOSE ]</span>
+        <h2 id="modalTitle"></h2>
+        <div class="detail-section">
+            <p id="modalDetailedDesc"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const commands = [
+        // CATEGORY: PACKAGE MANAGEMENT
+        { cmd: "sudo pacman -Syu", eng: "Full system synchronization and upgrade.", cat: "Package", detail: "This command synchronizes your local package database with the servers and upgrades every single outdated package on your system. It is the most critical command for maintaining a healthy Arch Linux installation." },
+        { cmd: "sudo pacman -Rns", eng: "Comprehensive package removal.", cat: "Package", detail: "Removes a package while also deleting its configuration files and any dependencies that were installed with it but are no longer needed by other programs. It ensures your system remains clean." },
+        { cmd: "yay -S [pkg]", eng: "Install a package from the AUR.", cat: "Package", detail: "Uses the 'yay' helper to download, build, and install software from the Arch User Repository. This is essential for software not found in the official repositories." },
+        { cmd: "pacman -Qdt", eng: "Identify orphan dependencies.", cat: "Package", detail: "Lists all installed packages that were originally required as a dependency for something else, but are now no longer needed. These 'orphans' can safely be removed to save space." },
+
+        // CATEGORY: SYSTEM CONTROL
+        { cmd: "systemctl status [svc]", eng: "Check the status of a service.", cat: "Systemd", detail: "Displays whether a specific background service (like a web server or Bluetooth) is active, dead, or failing, and provides the most recent log entries for that service." },
+        { cmd: "journalctl -p 3 -xb", eng: "Display critical system errors.", cat: "Logs", detail: "Filters the system logs to show only errors of priority level 3 (Err) or higher since the last boot. This is the primary tool for diagnosing system failures." },
+        { cmd: "reboot", eng: "Perform a system restart.", cat: "System", detail: "Immediately shuts down all processes and restarts the computer. It is often the simplest way to apply kernel updates or clear memory leaks." },
+
+        // CATEGORY: PROCESSES
+        { cmd: "kill -9 [pid]", eng: "Forcefully terminate a process.", cat: "Process", detail: "Sends the SIGKILL signal to a process ID. It bypasses any cleanup routines and shuts down the program instantly. Use this only when a program is completely unresponsive." },
+        { cmd: "btop", eng: "Interactive resource monitoring.", cat: "Monitor", detail: "A terminal-based UI that visualizes CPU usage per core, memory allocation, disk I/O, and network traffic in real-time. It is much more readable than the standard 'top' command." },
+
+        // CATEGORY: HARDWARE & X11
+        { cmd: "xrandr", eng: "Display configuration utility.", cat: "X11", detail: "Used to set output sizes, frequencies, and orientations for your monitors. It is indispensable for multi-monitor setups or fixing resolution issues on X11." },
+        { cmd: "lsusb", eng: "List all USB-connected hardware.", cat: "Hardware", detail: "Displays detailed information about the USB buses in the system and the devices connected to them. Vital for checking if a new hardware peripheral is detected." },
+        { cmd: "dmesg -w", eng: "Real-time kernel event monitoring.", cat: "Hardware", detail: "Displays messages from the kernel ring buffer as they happen. If you plug in a device and it does not work, this command will tell you exactly how the kernel reacted." },
+
+        // CATEGORY: FILESYSTEM
+        { cmd: "rm -rf [path]", eng: "Recursive and forced deletion.", cat: "Files", detail: "WARNING: Deletes the specified directory and all its contents without any confirmation. It is a powerful tool but can lead to irreversible data loss if used incorrectly." },
+        { cmd: "df -h", eng: "Display available disk space.", cat: "Disk", detail: "Shows the amount of used and available space on all mounted filesystems in human-readable units (GB, MB). Essential for preventing system crashes due to full disks." },
+        { cmd: "ls -la", eng: "List all files with permissions.", cat: "Files", detail: "Shows every file in the current directory, including hidden 'dotfiles', along with their sizes, owners, and read/write/execute permissions." },
+
+        // CATEGORY: NETWORK
+        { cmd: "nmcli device wifi", eng: "Scan for Wi-Fi networks via CLI.", cat: "Network", detail: "Lists all reachable wireless access points and their signal strengths. This allows you to manage connections entirely without a graphical user interface." },
+        { cmd: "ip addr", eng: "Display network interface info.", cat: "Network", detail: "Shows all active network interfaces and their assigned IP addresses. This is the modern replacement for the legacy 'ifconfig' command." }
+    ];
+
+    function renderTable(data) {
+        const body = document.getElementById('tableBody');
+        body.innerHTML = data.map(c => `
+            <tr onclick="showDetails('${c.cmd}')">
+                <td><code>${c.cmd}</code></td>
+                <td>${c.eng}</td>
+                <td>${c.cat}</td>
+            </tr>
+        `).join('');
+    }
+
+    function showDetails(commandStr) {
+        const c = commands.find(item => item.cmd === commandStr);
+        document.getElementById('modalTitle').innerText = c.cmd;
+        document.getElementById('modalDetailedDesc').innerText = c.detail;
+        document.getElementById('details-overlay').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('details-overlay').style.display = 'none';
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = commands.filter(c =>
+            c.cmd.toLowerCase().includes(term) ||
+            c.eng.toLowerCase().includes(term) ||
+            c.cat.toLowerCase().includes(term) ||
+            c.detail.toLowerCase().includes(term)
+        );
+        renderTable(filtered);
+    });
+
+    window.onclick = (e) => {
+        if (e.target == document.getElementById('details-overlay')) closeModal();
+    }
+
+    // Support for ESC key to close modal
+    window.addEventListener('keydown', (e) => {
+        if (e.key === "Escape") closeModal();
+    });
+
+    renderTable(commands);
+</script>
+
+</body>
+</html>
